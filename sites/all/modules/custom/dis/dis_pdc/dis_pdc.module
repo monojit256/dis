@@ -1,0 +1,127 @@
+<?php
+
+/**
+ * Implementation of hook_menu()
+ */
+function dis_pdc_menu() {
+
+    $items = array();
+
+	$items['add-pdc'] = array(
+        'title' => 'Add PDC - Select Company',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('add_pdc_form'),
+        'access callback' => 'user_access',
+        'access arguments' => array('create pdc content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'dis_pdc.menu.inc',
+    ); 	
+
+    return $items;
+}
+
+
+/**
+ * Implementation of hook_form_BASE_FORMID_alter
+ */
+function dis_pdc_form_views_form_pdc_register_page_alter(&$form, $form_state, $form_id){
+
+    if ($form_state['step'] == 'views_bulk_operations_config_form' && $form_state['input']['operation'] == 'rules_component::rules_utilize_pdc') {
+
+
+            //Alter Cheque Date field
+            $form['parameter']['cheque_date']['settings']['cheque_date']['#type'] = 'date_popup';
+            $form['parameter']['cheque_date']['settings']['cheque_date']['#date_format'] = 'd-m-Y';
+            $form['parameter']['cheque_date']['settings']['cheque_date']['#description'] = '';
+
+            //Alter Cheque Amount field
+            $form['parameter']['cheque_amount']['settings']['cheque_amount']['#size'] = 20;
+            $form['parameter']['cheque_amount']['settings']['cheque_amount']['#field_prefix'] = 'Rs. ';
+
+            //Alter Deposit Date field
+            $form['parameter']['deposit_date']['settings']['deposit_date']['#type'] = 'date_popup';
+            $form['parameter']['deposit_date']['settings']['deposit_date']['#date_format'] = 'd-m-Y';
+            $form['parameter']['deposit_date']['settings']['deposit_date']['#description'] = '';
+        }
+
+}
+
+
+/**
+ * Implementation of hook_form_BASE_FORMID_alter
+ */
+function dis_pdc_form_views_form_utilize_pdc_page_alter(&$form, $form_state, $form_id){
+
+    if ($form_state['step'] == 'views_bulk_operations_config_form') {
+
+
+            //Alter Cheque Date field
+            $form['parameter']['cheque_date']['settings']['cheque_date']['#type'] = 'date_popup';
+            $form['parameter']['cheque_date']['settings']['cheque_date']['#date_format'] = 'd-m-Y';
+            $form['parameter']['cheque_date']['settings']['cheque_date']['#description'] = '';
+
+            //Alter Cheque Amount field
+            $form['parameter']['cheque_amount']['settings']['cheque_amount']['#size'] = 20;
+            $form['parameter']['cheque_amount']['settings']['cheque_amount']['#field_prefix'] = 'Rs. ';
+
+            //Alter Deposit Date field
+            $form['parameter']['deposit_date']['settings']['deposit_date']['#type'] = 'date_popup';
+            $form['parameter']['deposit_date']['settings']['deposit_date']['#date_format'] = 'd-m-Y';
+            $form['parameter']['deposit_date']['settings']['deposit_date']['#description'] = '';
+
+
+            //Alter PDC field
+            $form['parameter']['pdc']['settings']['pdc']['#type'] = "select";
+
+            $invoices = $form_state['input']['views_bulk_operations'];
+            $first_selected_invoice_nid = 0;
+
+            foreach ($invoices as $key => $value) {
+                if($value != NULL){
+                    $first_selected_invoice_nid = $value;
+                    break;
+                }
+            }
+            $company_nid = node_load($first_selected_invoice_nid)->field_company['und'][0]['target_id'];
+
+            $pdcs = array();
+
+            $pdc_query = new EntityFieldQuery();
+            $pdc_query->entityCondition('entity_type', 'node')
+                      ->entityCondition('bundle', 'pdc') 
+                      ->fieldCondition('field_company', 'target_id', $company_nid, '=')
+                      ->fieldCondition('field_pdc_status', 'value', 'Unused', '=');
+            $pdc_result = $pdc_query->execute();
+            if (!empty($pdc_result['node'])) {
+                $pdcs = entity_load('node', array_keys($pdc_result['node']));
+            }
+
+            $options = array();
+
+            foreach($pdcs as $pdc){
+                $options[$pdc->nid] = $pdc->title;
+            }    
+            $form['parameter']['pdc']['settings']['pdc']['#options'] = $options;
+
+            //Alter remarks field
+            unset($form['parameter']['remarks']['settings']['help']['token']);
+
+            //Alter PDC field
+            unset($form['parameter']['pdc']['settings']['pdc']['#description']);
+        }
+
+}
+
+
+/*
+ * By default, text_formatted fields token are not being replaced. Altering through hooks
+ */
+function dis_pdc_tokens_alter(&$replacements, $context){   
+
+    if($context['type'] == 'text_formatted'){
+        if($context['tokens']['value'] == '[html-table:value]'){
+            $b = $context['data']['text_formatted']['value'];
+            $replacements[$context['tokens']['value']] = $b;
+        }
+    }
+}

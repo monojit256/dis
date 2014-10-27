@@ -1,0 +1,44 @@
+/* Customizations for Nodes */
+
+.panels-flexible-row {
+	border-top: solid 2px #D0D0D0;  
+    border-right: solid 2px #D0D0D0;
+    border-left: solid 2px #D0D0D0;
+    line-height: 30px;
+}
+
+.panels-flexible-row-last {
+	border-bottom: solid 2px #D0D0D0;
+}
+
+.panels-flexible-region .field-items {
+	padding: 5px;
+	
+}
+
+.panels-flexible-region .field-label {
+	padding: 5px;
+	width: 130px;
+	background: #DDDDDD;
+}
+
+.panels-flexible-1 .panels-flexible-region-inside-last {
+	padding: 0px;
+}
+
+.panels-flexible-region-first:not(.panels-flexible-region-last) .field-label {	
+	border-right: solid 2px #D0D0D0;
+}
+
+.panels-flexible-region-last:not(.panels-flexible-region-first) .field-label {	
+	border-right: solid 2px #D0D0D0;
+	border-left: solid 2px #D0D0D0;
+}
+
+.panels-flexible-region-first.panels-flexible-region-last .field-items {
+	border-left: solid 2px #D0D0D0;
+}
+
+.panels-flexible-new .panels-flexible-row {
+	padding: 0px;
+}

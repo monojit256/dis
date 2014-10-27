@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the DIS Core Features feature.
+ */
+
+include_once 'dis_core_features.features.inc';

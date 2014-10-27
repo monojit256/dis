@@ -1,0 +1,67 @@
+diff --git a/print.admin.inc b/print.admin.inc
+index 7aa8274..edeb9c3 100644
+--- a/print.admin.inc
++++ b/print.admin.inc
+@@ -71,6 +71,13 @@ function print_main_settings() {
+     '#description' => t('When this option is active, user comments are also included in the printer-friendly version. Requires the comment module.'),
+   );
+ 
++  $form['settings']['print_node_router'] = array(
++    '#type' => 'checkbox',
++    '#title' => t('Consult menu router for node display handler'),
++    '#default_value' => variable_get('print_node_router', PRINT_NODE_ROUTER_DEFAULT),
++    '#description' => t('When this option is active, print module will check the menu router for the handler to consult for page contents at node/%node.'),
++  );
++
+   $form['settings']['print_newwindow'] = array(
+     '#type' => 'radios',
+     '#title' => t('New window method'),
+diff --git a/print.module b/print.module
+index 1a56c9f..dfc1bd9 100644
+--- a/print.module
++++ b/print.module
+@@ -21,6 +21,7 @@ define('PRINT_KEEP_THEME_CSS_DEFAULT', 0);
+ define('PRINT_URLS_DEFAULT', 1);
+ define('PRINT_URLS_ANCHORS_DEFAULT', 0);
+ define('PRINT_COMMENTS_DEFAULT', 0);
++define('PRINT_NODE_ROUTER_DEFAULT', 0);
+ define('PRINT_NEWWINDOW_DEFAULT', 1);
+ 
+ define('PRINT_TYPE_URLLIST_DEFAULT', 1);
+diff --git a/print.pages.inc b/print.pages.inc
+index acf3973..ee11c8b 100644
+--- a/print.pages.inc
++++ b/print.pages.inc
+@@ -87,12 +87,13 @@ function print_controller($path, $format, $cid = NULL, $view_mode = PRINT_VIEW_M
+     $path = $alias;
+   }
+   $parts = explode('/', $path);
+-  if (($parts[0] == 'node') && (count($parts) > 1) && ctype_digit($parts[1])) {
++  $node_router = variable_get('print_node_router', FALSE);
++  if (($parts[0] == 'node') && (count($parts) > 1) && ctype_digit($parts[1]) && !$node_router) {
+     array_shift($parts);
+     $path = implode('/', $parts);
+   }
+   $revision_view = preg_match('!^[\d]*/revisions/[\d]*/view$!', $path);
+-  if (ctype_digit($parts[0]) && ((count($parts) == 1) || $revision_view)) {
++  if (ctype_digit($parts[0]) && ((count($parts) == 1) || $revision_view) && !$node_router) {
+     $vid = $revision_view ? $parts[2] : NULL;
+     $node = _print_generate_node($path, $format, $vid, $cid, $view_mode);
+   }
+@@ -676,10 +677,13 @@ function _print_generate_node($nid, $format, $vid = NULL, $cid = NULL, $view_mod
+ function _print_generate_path($path, $format) {
+   global $_print_urls;
+ 
+-  // Handle node tabs
++  // Handle node tabs, or cases where the 'node_router' option is
++  // enabled.
+   $parts = explode('/', $path);
+-  if (ctype_digit($parts[0]) && (count($parts) > 1)) {
+-    $path = 'node/' . $path;
++  if (ctype_digit($parts[0])) {
++    if (count($parts) > 1 || variable_get('print_node_router', FALSE)) {
++      $path = 'node/' . $path;
++    }
+   }
+ 
+   $path = drupal_get_normal_path($path);

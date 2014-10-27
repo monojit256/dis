@@ -1,0 +1,100 @@
+<?php
+
+/**
+ * Implementation of hook_menu()
+ */
+function dis_permits_menu() {
+
+    $items = array();
+
+	$items['add-associate-inward-permit'] = array(
+        'title' => 'Add Associate Inward Permit - Select Company',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('add_associate_inward_permit_form'),
+        'access callback' => 'user_access',
+        'access arguments' => array('create associate_inward_permit content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'dis_permits.menu.inc',
+    ); 	
+
+    $items['add-inward-permit'] = array(
+        'title' => 'Add Inward Permit - Select Company',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('add_inward_permit_form'),
+        'access callback' => 'user_access',
+        'access arguments' => array('create inward_permit content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'dis_permits.menu.inc',
+    );  
+
+    return $items;
+}
+
+
+/**
+ * Implementation of hook_form_BASE_FORM_ID_alter()
+ */
+function dis_permits_form_dispatch_node_form_alter(&$form, &$form_state, $form_id){
+
+    //Make Permit field visible only if permit is required
+    $form['field_associate_inward_permit']['und']['#states'] = array(
+        'visible' => array(
+            ':input[name="field_permit_required[und]"]' => array('value' => 1)
+            ),
+        'required' => array(
+            ':input[name="field_permit_required[und]"]' => array('value' => 1)
+            ),
+        );
+
+    //Custom Validate function to ensure that a permit is provided if it is required
+    $form['#validate'][] = 'dis_permits_associate_inward_permit_validate';
+}
+
+
+/**
+ * Custom Validate function for dispatch_node_form
+ */
+function dis_permits_associate_inward_permit_validate($form, &$form_state){
+    
+    if($form_state['input']['field_permit_required']['und'] == '1' && (!array_key_exists('field_associate_inward_permit', $form_state['input']) || $form_state['input']['field_associate_inward_permit']['und'] == '_none'))
+        form_set_error('form', t('Permit field is required'));
+
+    if($form_state['input']['field_permit_required']['und'] == '0')
+        form_set_value($form['field_associate_inward_permit'], array('und' => array(0 => array('value' => '_none'))), $form_state);
+    
+}
+
+
+
+/**
+ * Implementation of hook_form_BASE_FORM_ID_alter()
+ */
+function dis_permits_form_consignment_details_node_form_alter(&$form, &$form_state, $form_id){
+
+    //Make Permit field visible only if permit is required
+    $form['field_inward_permit']['und']['#states'] = array(
+        'visible' => array(
+            ':input[name="field_permit_required[und]"]' => array('value' => 1)
+            ),
+        'required' => array(
+            ':input[name="field_permit_required[und]"]' => array('value' => 1)
+            ),
+        );
+
+    //Custom Validate function to ensure that a permit is provided if it is required
+    $form['#validate'][] = 'dis_permits_inward_permit_validate';
+}
+
+
+/**
+ * Custom Validate function for dispatch_node_form
+ */
+function dis_permits_inward_permit_validate($form, &$form_state){
+    
+    if($form_state['input']['field_permit_required']['und'] == '1' && (!array_key_exists('field_inward_permit', $form_state['input']) || $form_state['input']['field_inward_permit']['und'] == '_none'))
+        form_set_error('form', t('Permit field is required'));
+
+    if($form_state['input']['field_permit_required']['und'] == '0')
+        form_set_value($form['field_inward_permit'], array('und' => array(0 => array('value' => '_none'))), $form_state);
+    
+}

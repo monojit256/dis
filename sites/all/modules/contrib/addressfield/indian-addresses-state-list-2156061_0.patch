@@ -1,0 +1,54 @@
+diff --git a/plugins/format/address.inc b/plugins/format/address.inc
+index d5426ad..69e9f84 100644
+--- a/plugins/format/address.inc
++++ b/plugins/format/address.inc
+@@ -311,6 +311,49 @@ function addressfield_format_address_generate(&$format, $address, $context = arr
+     );
+     $format['locality_block']['administrative_area']['#title'] = t('Province');
+   }
++  else if ($address['country'] == 'IN') {
++    $format['locality_block']['administrative_area']['#weight'] = 10;
++    $format['locality_block']['locality']['#weight'] = 11;
++    $format['locality_block']['postal_code']['#weight'] = 12;
++    $format['locality_block']['administrative_area']['#options'] = array(
++          '' => t('--'),
++          'AP' => t('Andhra Pradesh'),
++          'AR' => t('Arunachal Pradesh'),
++          'AS' => t('Assam'),
++          'BR' => t('Bihar'),
++          'CG' => t('Chhattisgarh'),
++          'GA' => t('Goa'),
++          'GJ' => t('Gujarat'),
++          'HR' => t('Haryana'),
++          'HP' => t('Himachal Pradesh'),
++          'JK' => t('Jammu & Kashmir'),
++          'JH' => t('Jharkhand'),
++          'KA' => t('Karnataka'),
++          'KL' => t('Kerala'),
++          'MP' => t('Madhya Pradesh'),
++          'MH' => t('Maharashtra'),
++          'MN' => t('Manipur'),
++          'ML' => t('Meghalaya'),
++          'MZ' => t('Mizoram'),
++          'NL' => t('Nagaland'),
++          'OR' => t('Odisha'),
++          'PB' => t('Punjab'),
++          'RJ' => t('Rajasthan'),
++          'SK' => t('Sikkim'),
++          'TN' => t('Tamil Nadu'),
++          'UT' => t('Uttarakhand'),
++          'UP' => t('Uttar Pradesh'),
++          'WB' => t('West Bengal'),
++          ' ' => t('--'),
++          'AN' => t('Andaman & Nicobar'),
++          'CH' => t('Chandigarh'),
++          'DD' => t('Daman & Diu'),
++          'DL' => t('Delhi'),
++          'DN' => t('Dadra and Nagar Haveli'),
++          'LD' => t('Lakshadweep'),
++          'PY' => t('Puducherry'),
++        );
++  }
+   elseif ($address['country'] == 'BR') {
+     $format['locality_block']['dependent_locality'] = array(
+       '#title' => t('Neighborhood'),

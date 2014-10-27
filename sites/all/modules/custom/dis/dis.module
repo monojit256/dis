@@ -1,0 +1,350 @@
+<?php
+
+/**
+ * Implementation of hook_menu()
+ */
+function dis_menu() {
+
+    $items = array();
+
+	$items['add-associate-executive-mapping'] = array(
+        'title' => 'Add Associate Executive Mapping - Select Company and Associate Type',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('add_associate_executive_mapping_form'),
+        'access callback' => 'user_access',
+        'access arguments' => array('create associate_executive_mapping content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'dis.menu.inc',
+    ); 	
+
+    $items['add-outward-invoice'] = array(
+        'title' => 'Add Outward Invoice- Select Company and Invoice Type',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('add_outward_invoice_form'),
+        'access callback' => 'user_access',
+        'access arguments' => array('create outward_invoice content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'dis.menu.inc',
+    );  
+
+    $items['add-inward-invoice'] = array(
+        'title' => 'Add Inward Invoice- Select Company and Invoice Type',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('add_inward_invoice_form'),
+        'access callback' => 'user_access',
+        'access arguments' => array('create inward_invoice content'),
+        'type' => MENU_CALLBACK,
+        'file' => 'dis.menu.inc',
+    );
+    $items['get-company-value'] =array(
+        'title' => 'get company value',
+        'page callback' => 'get_company_value',
+        'page arguments' => array('do_nothing'),
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+        );
+    $items['get-division'] =array(
+        'title' => 'get company Division',
+        'page callback' => 'get_division',
+        'page arguments' => array('do_nothing'),
+        'access callback' => TRUE,
+        'type' => MENU_CALLBACK,
+        );     
+    return $items;
+}
+
+
+/**
+ * Implementation of hook_form_BASE_FORM_ID_alter() - BASE ID = outward_invoice_node_form
+ * This hook used to set the default value of outward type and disbale the field in add/edit forms of Outward Invoice type
+ */
+function dis_form_outward_invoice_node_form_alter(&$form, &$form_state, $form_id){
+   
+    if(array_key_exists('field_outward_type', $_GET)){
+        $outward_type = $_GET['field_outward_type'];
+        if($outward_type == 'Sales Invoice' || $outward_type == 'Stock Transfer Out' || $outward_type == 'Purchase Return'){
+            $form['field_outward_type']['und']['#default_value'][0] = $outward_type;
+            $form['field_outward_type']['und']['#disabled'] = TRUE;
+        }
+    }
+
+    if(array_key_exists('#node_edit_form', $form) && $form['#node_edit_form'] == TRUE){
+        $form['field_outward_type']['und']['#disabled'] = TRUE;
+    }
+}
+
+/**
+ * Implementation of hook_form_BASE_FORM_ID_alter() - BASE ID = outward_invoice_node_form
+ * This hook used to set the default value of outward type and disbale the field in add/edit forms of Inward Invoice type
+ */
+function dis_form_inward_invoice_node_form_alter(&$form, &$form_state, $form_id){
+   
+    if(array_key_exists('field_inward_type', $_GET)){
+        $outward_type = $_GET['field_inward_type'];
+        if($outward_type == 'Purchase' || $outward_type == 'Stock Transfer In' || $outward_type == 'Sales Return'){
+            $form['field_inward_type']['und']['#default_value'][0] = $outward_type;
+            $form['field_inward_type']['und']['#disabled'] = TRUE;
+        }
+    }
+
+    if(array_key_exists('#node_edit_form', $form) && $form['#node_edit_form'] == TRUE){
+        $form['field_inward_type']['und']['#disabled'] = TRUE;
+    }
+}
+
+
+/*
+ * Function to return the financial year and quarter for a given date
+ * Compatible with 'Set Quarter and FY' Rules Action
+ */
+
+function dis_get_quarter_financialyear($invoice_date) {
+
+    //$invoice_date = date("d-m-Y",$invoice_date);
+    //$date = format_date($invoice_date, 'custom', 'd-m-Y');
+    $d = date_parse($invoice_date);
+    $month = $d['month'];
+    $year = $d['year'];
+
+    //Determine quarter
+    if ($month == '1' || $month == '2' || $month == '3')
+        $quarter = 'Q4';
+    elseif ($month == '4' || $month == '5' || $month == '6')
+        $quarter = 'Q1';
+    elseif ($month == '7' || $month == '8' || $month == '9')
+        $quarter = 'Q2';
+    else
+        $quarter = 'Q3';
+
+    //Determine Financial Year
+    if ($quarter == 'Q4') {
+        $first_year = $year - 1;
+        $second_year = $year % 100;
+        $financial_year = $first_year . '-' . $second_year;
+    } else {
+        $first_year = $year;
+        $second_year = ($year + 1) % 100;
+        $financial_year = $first_year . '-' . $second_year;
+    }
+
+    //Fetch Entity ID for Financial Year
+    $fy_query = new EntityFieldQuery();
+    $fy_query->entityCondition('entity_type', 'taxonomy_term')
+            ->entityCondition('bundle', 'financial_year')
+            ->propertyCondition('name', $financial_year);
+    $fy_result = $fy_query->execute();
+    $fy_id = array_shift($fy_result['taxonomy_term'])->tid;
+
+    return array(
+        'quarter' => $quarter,
+        'financial_year' => $fy_id,
+    );
+}
+
+
+
+/**
+ * Implementation of hook_form_BASE_FORM_ID_alter() - BASE ID = outward_invoice_node_form
+ * This hook used to set the default value of outward type and disable the field in add/edit forms of Outward Invoice type
+ */
+function dis_form_views_form_update_dispatch_page_alter(&$form, &$form_state, $form_id){
+   
+    if($form_state['step'] == 'views_bulk_operations_config_form'){
+
+    //Alter the field Dispatch Date
+    $form['parameter']['dispatch_date']['settings']['dispatch_date']['#type'] = 'date_popup';
+    $form['parameter']['dispatch_date']['settings']['dispatch_date']['#date_format'] = 'd-m-Y';
+    $form['parameter']['dispatch_date']['settings']['dispatch_date']['#description'] = '';
+
+    //Alter the field Dispatch Mode
+    $form['parameter']['dispatch_mode']['settings']['dispatch_mode']['#type'] = "select";
+
+    $mode_query = new EntityFieldQuery();
+    $mode_query->entityCondition('entity_type', 'taxonomy_term')
+                    ->entityCondition('bundle', 'dispatch_mode');                   
+    $mode_result = $mode_query->execute();
+    if (!empty($mode_result['taxonomy_term'])) {
+      $modes = entity_load('taxonomy_term', array_keys($mode_result['taxonomy_term']));
+    }
+    $options = array();
+    
+    //Restrict Dispatch Mode options based on Hand Delivery or Transporter delivery.
+    foreach($modes as $mode){
+        if($mode->name == 'Hand Delivery'){
+            $hand_delivery_tid = $mode->tid;
+        } 
+        $options[$mode->tid] = $mode->name;
+    }    
+    $form['parameter']['dispatch_mode']['settings']['dispatch_mode']['#options'] = $options;
+
+    $packing_nid = $form_state['input']['views_bulk_operations'];
+    $packing_node = node_load($packing_nid);
+    $transporter = node_load($packing_node->field_transporter['und'][0]['target_id'])->title;
+    if($transporter == 'HAND DELIVERY'){
+        $form['parameter']['dispatch_mode']['settings']['dispatch_mode']['#default_value'] = $hand_delivery_tid;
+        $form['parameter']['dispatch_mode']['settings']['dispatch_mode']['#disabled'] = TRUE;
+    }    
+
+    $form['parameter']['dispatch_mode']['settings']['dispatch_mode']['#description'] = "";
+    unset( $form['parameter']['dispatch_mode']['settings']['help']);
+
+    //Alter the field Vehcicle No
+    $form['parameter']['vehicle_no']['settings']['vehicle_no']['#type'] = "textfield";
+    unset( $form['parameter']['vehicle_no']['settings']['help']);
+
+}
+}
+
+/**
+ * Implements hook_element_info_alter() 
+ * To remove the description from data_popup
+ */
+function dis_element_info_alter(&$type) {
+  if (isset($type['date_popup'])) {
+    $type['date_popup']['#process'][] = 'dis_date_popup_process_alter';
+  }
+}
+
+/**
+ * Function to remove the description from date_popup
+ */
+ function dis_date_popup_process_alter(&$element, &$form_state, $context) {
+  unset($element['date']['#description']);
+  return $element;
+}
+
+
+/**
+ * Implements hook_form_BASEFORMID_alter()
+ * Dymanic Views Exposed Filters
+ */
+function dis_form_views_exposed_form_alter(&$form, &$form_state){
+  
+  if ($form['#id'] == 'views-exposed-form-view-edit-associate-executive-mapping-page' || $form['#id'] == 'views-exposed-form-update-packing-page' || $form['#id'] == 'views-exposed-form-outward-register-page') {
+    
+    if(array_key_exists(0, $form_state['input']['field_company_target_id'])){
+        $viewResults = views_get_view_result('division_list', 'entityreference_1', $form_state['input']['field_company_target_id'][0]);
+
+        $associativeArray = array();
+        $associativeArray['All'] = t('- Any -');
+
+        foreach($viewResults as $viewRow) {
+            $associativeArray[$viewRow->nid] = $viewRow->field_field_division_name[0]['raw']['value'];
+        }
+       
+        $form['field_division_target_id']['#options'] = $associativeArray;
+
+    }
+   
+  }
+}
+
+/*
+ * Implements hook_form_BASEFORMID_alter()
+ *
+ */
+function dis_form_user_login_alter(&$form, &$form_state) {
+    $form['name']['#description'] = t('');
+    $form['pass']['#description'] = t('');
+    $form['name']['#attributes']['placeholder'] = t( 'Username' );
+    $form['pass']['#attributes']['placeholder'] = t( 'Password' );
+    $form['name']['#title_display'] = "invisible";
+    $form['pass']['#title_display'] = "invisible";
+    $form['name']['#size'] = 15;
+    $form['pass']['#size'] = 15;
+}
+
+/**
+ *  Implements hook_form_FORM_ID_alter
+ */
+function dis_form_associate_executive_mapping_node_form_alter(&$form, &$form_state, $form_id)
+{
+    
+    //echo "<script>alert('hvhbh1');</script>";
+    $associate_type = array('Customer' => 'Customer','Branch' => 'Branch','Supplier' => 'Supplier');
+    //$form['theme_settings'][$name]['#disabled'] = TRUE;
+    //$form = array();
+   // unset($form['fields']);
+    $form['associate_type'] = array(
+            '#type' => 'select',
+            '#title' => 'Select Associate Type',
+            '#weight' => 33,
+            '#options' => $associate_type,
+            '#attributes' => array('onchange' => 'get_company(this);')
+        );
+    $form['field_company']['#attributes'] =  array('onchange' => 'get_company(this);');
+    //return $form;
+     dpm($form);
+     drupal_add_js("http://localhost/dis/sites/all/modules/custom/dis/java.js");
+}
+/**
+* Ajax Page Function get_company_value
+**/
+function get_company_value() {
+    //echo $_GET['a_t'];
+    $a_t=$_GET['a_t'];
+    $company_nid = $_GET['company'];
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type','node')
+    ->entityCondition('bundle','business_associate')
+    ->propertyCondition('status',1)
+    ->fieldCondition('field_company','target_id',$company_nid,'=')
+    ;
+    $result = $query->execute();
+    $associate_type_nids = array_keys($result['node']);
+    //dpm($get_associate_type);
+    //show_dpm($associate_type_nids);
+    //echo "{'name' : 'monojit'}";
+    $associate_type = array();
+   // foreach ($result['node'] as $n) {
+        //dpm($n);
+        //echo $n;
+        //dpm($associate_type_nids);
+        $associate_type_entites = entity_load('node',$associate_type_nids);
+        foreach ($associate_type_entites as $at) {
+            //dpm($at);
+            //echo $a_t;
+            if($at->field_associate_type['und'][0]['value'] == $a_t)
+            {
+                $associate_type[$at->nid] = $at->field_name['und'][0]['value'];
+            }
+        }
+        //dpm($associate_type_entites);
+      //  $associate_type[$n->nid] = $n->type;
+        //echo $n;
+       // echo "hybj";
+    //}
+    /*dpm($associate_type_nids);
+    show_dpm($result);
+    $a = array('b' => 'jgj','c' => 'jbgjb');
+    $b =  drupal_json_encode($a);*/
+    $b = drupal_json_encode($associate_type);
+    echo "$b";
+}
+/**
+* Ajax function Get Selected Company Dividion using fucntion get_division
+**/
+function get_division()
+{
+    //echo $_GET['company'];
+    $company_nid = $_GET['company'];
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type','node')
+    ->entityCondition('bundle','division')
+    ->propertyCondition('status',1)
+    ->fieldCondition('field_company','target_id',$company_nid,'=')
+    ;
+    $result = $query->execute();
+    $associate_type_nids = array_keys($result['node']);
+    $division_entites = entity_load('node',$associate_type_nids);
+    foreach ($division_entites as $de) {
+        //if($at->field_associate_type['und'][0]['value'] == $a_t)
+        //{
+                $division[$de->nid] = $de->field_division_name['und'][0]['value'];
+        //}
+    }
+    $b = drupal_json_encode($division);
+    echo "$b";
+
+
+}
